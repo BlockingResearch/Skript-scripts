@@ -1,0 +1,132 @@
+# ----------------------------
+#
+# Minecraft Hardcore Skript (Simplificado)
+# Creditos al equipo de Blocking Labs (dsc.gg/blockings, dub.sh/blockings), Gabinus (@_gabinus_, dub.sh/gabinus) y Blocking Research.
+# PORFAVOR DAR CRÉDITOS SI USAS ESTE CÓDIGO O PARTES DE ÉL, GRACIAS! ❤
+#
+# Addons necesarios: Skript (Recomendado 2.6+) 
+#
+# ----------------------------
+
+# funciones
+
+function sendMessage(p: player, title: text, lines: texts):
+    send "" to {_p}
+    send "&8&m━━━━━━━━━━━━━━━━━━━━━━━━━━" to {_p}
+    send "%{_title}%" to {_p}
+    send "&8" to {_p}
+    loop {_lines::*}:
+        send "%loop-value%" to {_p}
+    send "&8" to {_p}
+    send "&8&m━━━━━━━━━━━━━━━━━━━━━━━━━━" to {_p}
+
+function broadcastMessage(title: text, lines: texts):
+    broadcast ""
+    broadcast "&8&m━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    broadcast "%{_title}%"
+    broadcast "&8"
+    loop {_lines::*}:
+        broadcast "%loop-value%"
+    broadcast "&8"
+    broadcast "&8&m━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+# tab + actionbar
+
+on join:
+    set {_uuid} to uuid of player
+    if {vidas::%{_uuid}%} is not set:
+        set {vidas::%{_uuid}%} to 2
+    if {kills::%{_uuid}%} is not set:
+        set {kills::%{_uuid}%} to 0
+    if {muertes::%{_uuid}%} is not set:
+        set {muertes::%{_uuid}%} to 0
+
+on quit:
+    clear {vidas.muerto::%uuid of player%}
+
+# actionbar cada seg
+
+every 1 second:
+    loop all players:
+        updateActionBar(loop-player)
+
+# actionbar
+
+function updateActionBar(p: player):
+    set {_uuid} to uuid of {_p}
+    set {_vidas} to {vidas::%{_uuid}%}
+    if {_vidas} is not set:
+        set {_vidas} to 2
+    
+    set {_kills} to {kills::%{_uuid}%}
+    if {_kills} is not set:
+        set {_kills} to 0
+    
+    # corazones
+    set {_corazones} to "&c❤❤"
+    if {_vidas} = 1:
+        set {_corazones} to "&c❤&8❤"
+    if {_vidas} <= 0:
+        set {_corazones} to "&8❤❤"
+    
+    send action bar "&e⚔ Kills %{_kills}%  &8|  &c☠ Vidas %{_corazones}%" to {_p}
+
+# vidas y muertes
+
+on death of player:
+    set {_uuid} to uuid of victim
+    add 1 to {muertes::%{_uuid}%}
+    
+    if attacker is a player:
+        set {_attackerUUID} to uuid of attacker
+        add 1 to {kills::%{_attackerUUID}%}
+    
+    remove 1 from {vidas::%{_uuid}%}
+    
+    # spectator
+    set game mode of victim to spectator
+    
+    if {vidas::%{_uuid}%} <= 0:
+        set {vidas.muerto::%{_uuid}%} to true
+        send title "&4&l☠ ELIMINADO ☠" with subtitle "&cHas perdido todas tus vidas" to victim for 3 seconds
+        wait 15 seconds
+        ban victim due to "Eliminado del evento"
+        kick victim
+    if {vidas::%{_uuid}%} > 0:
+        send title "&c&l☠ MUERTE ☠" with subtitle "&7Vidas: &c%{vidas::%{_uuid}%}%&8/&72" to victim for 2 seconds
+        wait 4 seconds
+        set game mode of victim to survival
+        teleport victim to {spawn}
+
+# comandos esenciales
+
+command /setvidas <player> <integer>:
+    permission: admin.vidas
+    trigger:
+        set {_uuid} to uuid of arg-1
+        set {vidas::%{_uuid}%} to arg-2
+        send "&aVidas de &e%arg-1% &aestablecidas a &e%arg-2%"
+        send "&aTus vidas fueron establecidas a &e%arg-2%" to arg-1
+
+command /addvida <player>:
+    permission: admin.vidas
+    trigger:
+        set {_uuid} to uuid of arg-1
+        add 1 to {vidas::%{_uuid}%}
+        send "&a+1 vida para &e%arg-1%&a. Total: &e%{vidas::%{_uuid}%}%"
+
+command /removevida <player>:
+    permission: admin.vidas
+    trigger:
+        set {_uuid} to uuid of arg-1
+        remove 1 from {vidas::%{_uuid}%}
+        send "&c-1 vida para &e%arg-1%&c. Total: &e%{vidas::%{_uuid}%}%"
+
+command /vidas [<player>]:
+    trigger:
+        if arg-1 is set:
+            set {_uuid} to uuid of arg-1
+            send "&7Vidas de &e%arg-1%&7: &c%{vidas::%{_uuid}%}%"
+        if arg-1 is not set:
+            set {_uuid} to uuid of player
+            send "&7Tus vidas: &c%{vidas::%{_uuid}%}%"
